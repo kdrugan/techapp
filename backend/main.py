@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List, Dict, Any
 import os
 import time
@@ -69,6 +69,37 @@ class TripRequest(BaseModel):
 class TripResponse(BaseModel):
     result: str
     tool_calls: List[Dict[str, Any]] = []
+
+
+class NewsDigestRequest(BaseModel):
+    """Request model for the daily tech news digest."""
+    interests: List[str]  # 3-5 required interests
+    job_role: str         # e.g., "Senior PM at B2B SaaS"
+    time_range: Optional[str] = "24h"  # default 24 hours
+    
+    @field_validator('interests')
+    @classmethod
+    def validate_interests(cls, v):
+        if len(v) < 3 or len(v) > 5:
+            raise ValueError('Must provide 3-5 interests')
+        return v
+
+
+class NewsDigestArticle(BaseModel):
+    """A single article in the news digest."""
+    rank: int
+    title: str
+    source: str
+    url: str
+    summary: str
+    why_relevant: str
+    read_time: str
+
+
+class NewsDigestResponse(BaseModel):
+    """Response model for the daily tech news digest."""
+    digest_date: str
+    articles: List[NewsDigestArticle]
 
 
 def _init_llm():
@@ -851,6 +882,69 @@ def plan_trip(req: TripRequest):
             out = graph.invoke(state)
     
     return TripResponse(result=out.get("final", ""), tool_calls=out.get("tool_calls", []))
+
+
+@app.post("/get-daily-digest", response_model=NewsDigestResponse)
+def get_daily_digest(req: NewsDigestRequest):
+    """
+    Get a personalized daily digest of top 5 tech articles based on user interests and job role.
+    
+    This endpoint will integrate with the Discovery, Relevance, Trends, and Curator agents
+    to search, score, and curate articles. For now, returns a placeholder response.
+    """
+    # Placeholder response - will integrate with agents later
+    placeholder_articles = [
+        NewsDigestArticle(
+            rank=1,
+            title="Sample Article: AI Advances in 2026",
+            source="TechCrunch",
+            url="https://example.com/article1",
+            summary="A placeholder article about AI advancements relevant to your interests.",
+            why_relevant=f"Based on your role as '{req.job_role}' and interests in {', '.join(req.interests[:2])}.",
+            read_time="5 min"
+        ),
+        NewsDigestArticle(
+            rank=2,
+            title="Sample Article: Cloud Infrastructure Trends",
+            source="The Verge",
+            url="https://example.com/article2",
+            summary="A placeholder article about cloud infrastructure developments.",
+            why_relevant=f"Relevant to your interests and role in the tech industry.",
+            read_time="4 min"
+        ),
+        NewsDigestArticle(
+            rank=3,
+            title="Sample Article: Developer Tools Evolution",
+            source="Hacker News",
+            url="https://example.com/article3",
+            summary="A placeholder article about the evolution of developer tools.",
+            why_relevant=f"Matches your interest areas and professional context.",
+            read_time="6 min"
+        ),
+        NewsDigestArticle(
+            rank=4,
+            title="Sample Article: Startup Funding News",
+            source="VentureBeat",
+            url="https://example.com/article4",
+            summary="A placeholder article about recent startup funding rounds.",
+            why_relevant=f"Aligned with your stated interests.",
+            read_time="3 min"
+        ),
+        NewsDigestArticle(
+            rank=5,
+            title="Sample Article: Tech Industry Analysis",
+            source="Ars Technica",
+            url="https://example.com/article5",
+            summary="A placeholder article providing tech industry analysis.",
+            why_relevant=f"Curated for professionals like you.",
+            read_time="7 min"
+        ),
+    ]
+    
+    return NewsDigestResponse(
+        digest_date=datetime.now().strftime("%Y-%m-%d"),
+        articles=placeholder_articles
+    )
 
 
 if __name__ == "__main__":
