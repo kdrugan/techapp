@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-trip-planner-backend
+    name: techpulse-daily
     env: python
     plan: free
     rootDir: backend
